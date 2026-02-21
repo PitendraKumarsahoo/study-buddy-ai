@@ -2,15 +2,17 @@ import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import {
-  BookOpen, MessageSquare, FileText, Newspaper, Compass, LogOut, Menu, X, GraduationCap,
+  BookOpen, MessageSquare, FileText, Newspaper, Compass, Mic, LayoutDashboard, LogOut, Menu, X, GraduationCap,
 } from "lucide-react";
 import { useState } from "react";
 
 const navItems = [
+  { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/study", label: "Study", icon: BookOpen },
   { to: "/chat", label: "AI Chat", icon: MessageSquare },
   { to: "/resume", label: "Resume", icon: FileText },
-  { to: "/news-check", label: "News Check", icon: Newspaper },
+  { to: "/voice-notes", label: "Voice", icon: Mic },
+  { to: "/news-check", label: "News", icon: Newspaper },
   { to: "/recommendations", label: "For You", icon: Compass },
 ];
 

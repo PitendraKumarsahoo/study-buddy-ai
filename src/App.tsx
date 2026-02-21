@@ -7,9 +7,11 @@ import { AuthProvider } from "@/hooks/useAuth";
 import Navbar from "@/components/Navbar";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
+import Dashboard from "./pages/Dashboard";
 import StudyAssistant from "./pages/StudyAssistant";
 import Chatbot from "./pages/Chatbot";
 import ResumeGenerator from "./pages/ResumeGenerator";
+import VoiceNotes from "./pages/VoiceNotes";
 import NewsChecker from "./pages/NewsChecker";
 import Recommendations from "./pages/Recommendations";
 import NotFound from "./pages/NotFound";
@@ -27,9 +29,11 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/auth" element={<Auth />} />
+            <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/study" element={<StudyAssistant />} />
             <Route path="/chat" element={<Chatbot />} />
             <Route path="/resume" element={<ResumeGenerator />} />
+            <Route path="/voice-notes" element={<VoiceNotes />} />
             <Route path="/news-check" element={<NewsChecker />} />
             <Route path="/recommendations" element={<Recommendations />} />
             <Route path="*" element={<NotFound />} />

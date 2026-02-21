@@ -25,14 +25,19 @@ export default function Auth() {
       if (error) {
         toast({ title: "Error", description: error, variant: "destructive" });
       } else {
-        navigate("/");
+        navigate("/dashboard");
       }
     } else {
       const { error } = await signUp(email, password, fullName);
       if (error) {
         toast({ title: "Error", description: error, variant: "destructive" });
       } else {
-        toast({ title: "Success", description: "Check your email to verify your account!" });
+        toast({ title: "Success", description: "Account created! Signing you in..." });
+        // Auto-confirm is enabled, so sign in immediately
+        const signInResult = await signIn(email, password);
+        if (!signInResult.error) {
+          navigate("/dashboard");
+        }
       }
     }
     setLoading(false);
