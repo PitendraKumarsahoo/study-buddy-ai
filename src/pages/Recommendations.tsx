@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { streamAI } from "@/lib/ai";
+import { logActivity } from "@/lib/activity";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -30,7 +31,10 @@ export default function Recommendations() {
         content += chunk;
         setResult(content);
       },
-      onDone: () => setLoading(false),
+      onDone: () => {
+        setLoading(false);
+        logActivity(`Got recommendations for ${goal || interests || "profile"}`, "recommendations");
+      },
       onError: (err) => {
         toast({ title: "Error", description: err, variant: "destructive" });
         setLoading(false);

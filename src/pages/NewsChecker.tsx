@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { streamAI } from "@/lib/ai";
+import { logActivity } from "@/lib/activity";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Newspaper, Loader2, Search } from "lucide-react";
@@ -25,7 +26,10 @@ export default function NewsChecker() {
         content += chunk;
         setResult(content);
       },
-      onDone: () => setLoading(false),
+      onDone: () => {
+        setLoading(false);
+        logActivity(`Checked news article credibility`, "fake_news");
+      },
       onError: (err) => {
         toast({ title: "Error", description: err, variant: "destructive" });
         setLoading(false);

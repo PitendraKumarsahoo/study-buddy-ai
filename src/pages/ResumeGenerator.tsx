@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { streamAI } from "@/lib/ai";
+import { logActivity } from "@/lib/activity";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -39,7 +40,10 @@ export default function ResumeGenerator() {
         content += chunk;
         setResult(content);
       },
-      onDone: () => setLoading(false),
+      onDone: () => {
+        setLoading(false);
+        logActivity(`Generated ${type} for ${form.name || "user"}`, "resume");
+      },
       onError: (err) => {
         toast({ title: "Error", description: err, variant: "destructive" });
         setLoading(false);

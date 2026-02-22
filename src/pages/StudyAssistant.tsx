@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { streamAI } from "@/lib/ai";
+import { logActivity, saveConversation } from "@/lib/activity";
 import ChatMessage from "@/components/ChatMessage";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,6 +22,7 @@ export default function StudyAssistant() {
   const [topic, setTopic] = useState("");
   const [messages, setMessages] = useState<{ role: "user" | "assistant"; content: string }[]>([]);
   const [loading, setLoading] = useState(false);
+  const [convId, setConvId] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
@@ -35,8 +37,10 @@ export default function StudyAssistant() {
     const modeConfig = modes.find(m => m.value === mode)!;
     const userMessage = `${modeConfig.prompt}${topic}`;
     const userDisplay = topic;
+    const currentTopic = topic;
     setTopic("");
-    setMessages(prev => [...prev, { role: "user", content: userDisplay }]);
+    const newMessages = [...messages, { role: "user" as const, content: userDisplay }];
+    setMessages(newMessages);
     setLoading(true);
 
     let assistantContent = "";
@@ -55,7 +59,13 @@ export default function StudyAssistant() {
       messages: [{ role: "user", content: userMessage }],
       mode: "study",
       onDelta: updateAssistant,
-      onDone: () => setLoading(false),
+      onDone: async () => {
+        setLoading(false);
+        const allMsgs = [...newMessages, { role: "assistant" as const, content: assistantContent }];
+        const id = await saveConversation("study", `${modeConfig.label}: ${currentTopic}`, allMsgs, convId ?? undefined);
+        if (id) setConvId(id);
+        logActivity(`Generated ${modeConfig.label.toLowerCase()} on ${currentTopic}`, "study");
+      },
       onError: (err) => {
         toast({ title: "Error", description: err, variant: "destructive" });
         setLoading(false);
