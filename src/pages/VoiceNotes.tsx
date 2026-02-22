@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback } from "react";
 import { streamAI } from "@/lib/ai";
+import { logActivity } from "@/lib/activity";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
@@ -69,7 +70,10 @@ export default function VoiceNotes() {
       messages: [{ role: "user", content: `Summarize these lecture notes into well-structured, concise notes with headings and bullet points:\n\n${transcript}` }],
       mode: "study",
       onDelta: (chunk) => { content += chunk; setSummary(content); },
-      onDone: () => setLoading(false),
+      onDone: () => {
+        setLoading(false);
+        logActivity("Summarized voice recording", "voice_notes");
+      },
       onError: (err) => { toast({ title: "Error", description: err, variant: "destructive" }); setLoading(false); },
     });
   };

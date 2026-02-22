@@ -1,5 +1,7 @@
 import { Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,15 +18,46 @@ const tools = [
   { to: "/recommendations", label: "For You", icon: Compass, desc: "Personalized suggestions" },
 ];
 
-const recentActivity = [
-  { action: "Generated notes on Machine Learning", time: "Just now", icon: BookOpen },
-  { action: "Created a professional resume", time: "2 hours ago", icon: FileText },
-  { action: "Checked news article credibility", time: "Yesterday", icon: Newspaper },
-];
+const modeIcons: Record<string, typeof BookOpen> = {
+  study: BookOpen,
+  chatbot: MessageSquare,
+  resume: FileText,
+  fake_news: Newspaper,
+  recommendations: Compass,
+  voice_notes: Mic,
+};
+
+function timeAgo(date: string) {
+  const seconds = Math.floor((Date.now() - new Date(date).getTime()) / 1000);
+  if (seconds < 60) return "Just now";
+  if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
+  if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
+  if (seconds < 604800) return `${Math.floor(seconds / 86400)}d ago`;
+  return new Date(date).toLocaleDateString();
+}
+
+type ActivityItem = { action: string; mode: string; created_at: string };
 
 export default function Dashboard() {
   const { user } = useAuth();
   const displayName = user?.user_metadata?.full_name || user?.email?.split("@")[0] || "Student";
+  const [activities, setActivities] = useState<ActivityItem[]>([]);
+  const [totalConvs, setTotalConvs] = useState(0);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!user) return;
+    const fetchData = async () => {
+      const [actRes, convRes] = await Promise.all([
+        supabase.from("activity_logs").select("action, mode, created_at").order("created_at", { ascending: false }).limit(5),
+        supabase.from("conversations").select("id", { count: "exact", head: true }),
+      ]);
+      setActivities((actRes.data as ActivityItem[]) ?? []);
+      setTotalConvs(convRes.count ?? 0);
+      setLoading(false);
+    };
+    fetchData();
+  }, [user]);
 
   return (
     <div className="container max-w-6xl py-8 space-y-8 animate-fade-in">
@@ -73,47 +106,49 @@ export default function Dashboard() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {recentActivity.map((item, i) => (
-              <div key={i} className="flex items-start gap-3">
-                <div className="h-8 w-8 rounded-md bg-muted flex items-center justify-center flex-shrink-0">
-                  <item.icon className="h-4 w-4 text-muted-foreground" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">{item.action}</p>
-                  <p className="text-xs text-muted-foreground flex items-center gap-1">
-                    <Clock className="h-3 w-3" /> {item.time}
-                  </p>
-                </div>
-              </div>
-            ))}
+            {loading ? (
+              <p className="text-sm text-muted-foreground">Loading...</p>
+            ) : activities.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No activity yet. Try one of the tools above!</p>
+            ) : (
+              activities.map((item, i) => {
+                const Icon = modeIcons[item.mode] || Activity;
+                return (
+                  <div key={i} className="flex items-start gap-3">
+                    <div className="h-8 w-8 rounded-md bg-muted flex items-center justify-center flex-shrink-0">
+                      <Icon className="h-4 w-4 text-muted-foreground" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{item.action}</p>
+                      <p className="text-xs text-muted-foreground flex items-center gap-1">
+                        <Clock className="h-3 w-3" /> {timeAgo(item.created_at)}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })
+            )}
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-base flex items-center gap-2">
-              <Sparkles className="h-4 w-4 text-primary" /> Getting Started
+              <Sparkles className="h-4 w-4 text-primary" /> Your Stats
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            <p className="text-sm text-muted-foreground">Try these to get the most out of StudyAI:</p>
-            <ul className="space-y-2 text-sm">
-              <li className="flex items-center gap-2">
-                <span className="h-5 w-5 rounded-full bg-primary/10 text-primary text-xs flex items-center justify-center font-medium">1</span>
-                Ask the Study Assistant to explain any topic
-              </li>
-              <li className="flex items-center gap-2">
-                <span className="h-5 w-5 rounded-full bg-primary/10 text-primary text-xs flex items-center justify-center font-medium">2</span>
-                Record a lecture with Voice-to-Notes
-              </li>
-              <li className="flex items-center gap-2">
-                <span className="h-5 w-5 rounded-full bg-primary/10 text-primary text-xs flex items-center justify-center font-medium">3</span>
-                Generate your professional resume
-              </li>
-            </ul>
+            <div className="flex items-center justify-between p-3 rounded-lg bg-muted">
+              <span className="text-sm">Total Conversations</span>
+              <span className="font-bold text-primary">{totalConvs}</span>
+            </div>
+            <div className="flex items-center justify-between p-3 rounded-lg bg-muted">
+              <span className="text-sm">Activities Logged</span>
+              <span className="font-bold text-primary">{activities.length > 0 ? "Active" : "New"}</span>
+            </div>
             <Link to="/study">
               <Button size="sm" className="mt-2 gap-1">
-                Start Now <ArrowRight className="h-3 w-3" />
+                Start Studying <ArrowRight className="h-3 w-3" />
               </Button>
             </Link>
           </CardContent>

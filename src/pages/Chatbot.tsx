@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { streamAI } from "@/lib/ai";
+import { logActivity, saveConversation } from "@/lib/activity";
 import ChatMessage from "@/components/ChatMessage";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,6 +13,7 @@ export default function Chatbot() {
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [convId, setConvId] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
@@ -24,6 +26,7 @@ export default function Chatbot() {
     if (!input.trim() || loading) return;
 
     const userMsg: Msg = { role: "user", content: input };
+    const userText = input;
     const allMessages = [...messages, userMsg];
     setMessages(allMessages);
     setInput("");
@@ -45,7 +48,13 @@ export default function Chatbot() {
       messages: allMessages,
       mode: "chatbot",
       onDelta: upsert,
-      onDone: () => setLoading(false),
+      onDone: async () => {
+        setLoading(false);
+        const finalMsgs = [...allMessages, { role: "assistant" as const, content: assistantContent }];
+        const id = await saveConversation("chatbot", userText.slice(0, 60), finalMsgs, convId ?? undefined);
+        if (id) setConvId(id);
+        logActivity(`Chat: ${userText.slice(0, 50)}`, "chatbot");
+      },
       onError: (err) => {
         toast({ title: "Error", description: err, variant: "destructive" });
         setLoading(false);
@@ -64,7 +73,7 @@ export default function Chatbot() {
           <p className="text-muted-foreground mt-1">Ask anything — academics, careers, study tips, and more.</p>
         </div>
         {messages.length > 0 && (
-          <Button variant="ghost" size="sm" onClick={() => setMessages([])}>
+          <Button variant="ghost" size="sm" onClick={() => { setMessages([]); setConvId(null); }}>
             <Trash2 className="h-4 w-4 mr-1" /> Clear
           </Button>
         )}
