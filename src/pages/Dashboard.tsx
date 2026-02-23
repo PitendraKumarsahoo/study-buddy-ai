@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
   BookOpen, MessageSquare, FileText, Newspaper, Compass, Mic,
-  ArrowRight, Activity, Clock, Sparkles, GraduationCap,
+  ArrowRight, Activity, Clock, Sparkles, GraduationCap, History,
 } from "lucide-react";
 
 const tools = [
@@ -27,6 +27,24 @@ const modeIcons: Record<string, typeof BookOpen> = {
   voice_notes: Mic,
 };
 
+const modeRoutes: Record<string, string> = {
+  study: "/study",
+  chatbot: "/chat",
+  resume: "/resume",
+  fake_news: "/news-check",
+  recommendations: "/recommendations",
+  voice_notes: "/voice-notes",
+};
+
+const modeLabels: Record<string, string> = {
+  study: "Study Assistant",
+  chatbot: "AI Chatbot",
+  resume: "Resume Builder",
+  fake_news: "News Checker",
+  recommendations: "For You",
+  voice_notes: "Voice Notes",
+};
+
 function timeAgo(date: string) {
   const seconds = Math.floor((Date.now() - new Date(date).getTime()) / 1000);
   if (seconds < 60) return "Just now";
@@ -37,22 +55,26 @@ function timeAgo(date: string) {
 }
 
 type ActivityItem = { action: string; mode: string; created_at: string };
+type ConversationItem = { id: string; title: string; mode: string; updated_at: string };
 
 export default function Dashboard() {
   const { user } = useAuth();
   const displayName = user?.user_metadata?.full_name || user?.email?.split("@")[0] || "Student";
   const [activities, setActivities] = useState<ActivityItem[]>([]);
+  const [conversations, setConversations] = useState<ConversationItem[]>([]);
   const [totalConvs, setTotalConvs] = useState(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!user) return;
     const fetchData = async () => {
-      const [actRes, convRes] = await Promise.all([
+      const [actRes, convRes, recentConvs] = await Promise.all([
         supabase.from("activity_logs").select("action, mode, created_at").order("created_at", { ascending: false }).limit(5),
         supabase.from("conversations").select("id", { count: "exact", head: true }),
+        supabase.from("conversations").select("id, title, mode, updated_at").order("updated_at", { ascending: false }).limit(10),
       ]);
       setActivities((actRes.data as ActivityItem[]) ?? []);
+      setConversations((recentConvs.data as ConversationItem[]) ?? []);
       setTotalConvs(convRes.count ?? 0);
       setLoading(false);
     };
@@ -95,6 +117,51 @@ export default function Dashboard() {
             </Link>
           ))}
         </div>
+      </section>
+
+      {/* Conversation History */}
+      <section>
+        <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+          <History className="h-5 w-5 text-primary" /> Recent Conversations
+        </h2>
+        {loading ? (
+          <p className="text-sm text-muted-foreground">Loading...</p>
+        ) : conversations.length === 0 ? (
+          <Card>
+            <CardContent className="p-6 text-center text-sm text-muted-foreground">
+              No conversations yet. Start using a tool above to see your history here!
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="grid gap-3">
+            {conversations.map((conv) => {
+              const Icon = modeIcons[conv.mode] || Activity;
+              const route = modeRoutes[conv.mode] || "/chat";
+              const label = modeLabels[conv.mode] || conv.mode;
+              return (
+                <Link key={conv.id} to={`${route}?conv=${conv.id}`}>
+                  <Card className="hover:border-primary/40 hover:shadow-card transition-all duration-200 group cursor-pointer">
+                    <CardContent className="p-4 flex items-center gap-4">
+                      <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                        <Icon className="h-5 w-5 text-primary" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium truncate group-hover:text-primary transition-colors">{conv.title}</p>
+                        <p className="text-xs text-muted-foreground flex items-center gap-2">
+                          <span>{label}</span>
+                          <span>·</span>
+                          <Clock className="h-3 w-3" />
+                          <span>{timeAgo(conv.updated_at)}</span>
+                        </p>
+                      </div>
+                      <ArrowRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </CardContent>
+                  </Card>
+                </Link>
+              );
+            })}
+          </div>
+        )}
       </section>
 
       {/* Activity & Stats */}
