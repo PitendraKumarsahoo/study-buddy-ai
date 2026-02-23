@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { streamAI } from "@/lib/ai";
 import { logActivity, saveConversation } from "@/lib/activity";
+import { supabase } from "@/integrations/supabase/client";
 import ChatMessage from "@/components/ChatMessage";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,13 +20,30 @@ const modes: { value: Mode; label: string; icon: typeof BookOpen; prompt: string
 ];
 
 export default function StudyAssistant() {
+  const [searchParams] = useSearchParams();
   const [mode, setMode] = useState<Mode>("explain");
   const [topic, setTopic] = useState("");
   const [messages, setMessages] = useState<{ role: "user" | "assistant"; content: string }[]>([]);
   const [loading, setLoading] = useState(false);
-  const [convId, setConvId] = useState<string | null>(null);
+  const [convId, setConvId] = useState<string | null>(searchParams.get("conv"));
+  const [loadingConv, setLoadingConv] = useState(!!searchParams.get("conv"));
   const bottomRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
+
+  // Load existing conversation
+  useEffect(() => {
+    const id = searchParams.get("conv");
+    if (!id) return;
+    const load = async () => {
+      const { data } = await supabase.from("conversations").select("messages").eq("id", id).maybeSingle();
+      if (data?.messages) {
+        setMessages(data.messages as { role: "user" | "assistant"; content: string }[]);
+        setConvId(id);
+      }
+      setLoadingConv(false);
+    };
+    load();
+  }, []);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -95,11 +114,15 @@ export default function StudyAssistant() {
 
       {/* Chat area */}
       <div className="bg-card border border-border rounded-xl p-4 min-h-[400px] max-h-[60vh] overflow-y-auto space-y-4">
-        {messages.length === 0 && (
+        {loadingConv ? (
+          <div className="flex items-center justify-center h-64 text-muted-foreground text-sm">
+            <Loader2 className="h-5 w-5 animate-spin mr-2" /> Loading conversation...
+          </div>
+        ) : messages.length === 0 ? (
           <div className="flex items-center justify-center h-64 text-muted-foreground text-sm">
             Enter a topic below to get started...
           </div>
-        )}
+        ) : null}
         {messages.map((m, i) => (
           <ChatMessage key={i} role={m.role} content={m.content} />
         ))}

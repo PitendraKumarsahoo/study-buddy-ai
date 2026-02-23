@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { streamAI } from "@/lib/ai";
 import { logActivity, saveConversation } from "@/lib/activity";
+import { supabase } from "@/integrations/supabase/client";
 import ChatMessage from "@/components/ChatMessage";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,12 +12,29 @@ import { useToast } from "@/hooks/use-toast";
 type Msg = { role: "user" | "assistant"; content: string };
 
 export default function Chatbot() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
-  const [convId, setConvId] = useState<string | null>(null);
+  const [convId, setConvId] = useState<string | null>(searchParams.get("conv"));
+  const [loadingConv, setLoadingConv] = useState(!!searchParams.get("conv"));
   const bottomRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
+
+  // Load existing conversation
+  useEffect(() => {
+    const id = searchParams.get("conv");
+    if (!id) return;
+    const load = async () => {
+      const { data } = await supabase.from("conversations").select("messages, title").eq("id", id).maybeSingle();
+      if (data?.messages) {
+        setMessages(data.messages as Msg[]);
+        setConvId(id);
+      }
+      setLoadingConv(false);
+    };
+    load();
+  }, []);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -73,14 +92,18 @@ export default function Chatbot() {
           <p className="text-muted-foreground mt-1">Ask anything — academics, careers, study tips, and more.</p>
         </div>
         {messages.length > 0 && (
-          <Button variant="ghost" size="sm" onClick={() => { setMessages([]); setConvId(null); }}>
+          <Button variant="ghost" size="sm" onClick={() => { setMessages([]); setConvId(null); setSearchParams({}); }}>
             <Trash2 className="h-4 w-4 mr-1" /> Clear
           </Button>
         )}
       </div>
 
       <div className="bg-card border border-border rounded-xl p-4 min-h-[400px] max-h-[60vh] overflow-y-auto space-y-4">
-        {messages.length === 0 && (
+        {loadingConv ? (
+          <div className="flex items-center justify-center h-64 text-muted-foreground text-sm">
+            <Loader2 className="h-5 w-5 animate-spin mr-2" /> Loading conversation...
+          </div>
+        ) : messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-64 text-muted-foreground text-sm space-y-3">
             <MessageSquare className="h-12 w-12 opacity-30" />
             <p>Start a conversation with your AI assistant...</p>
@@ -96,7 +119,7 @@ export default function Chatbot() {
               ))}
             </div>
           </div>
-        )}
+        ) : null}
         {messages.map((m, i) => <ChatMessage key={i} role={m.role} content={m.content} />)}
         <div ref={bottomRef} />
       </div>
