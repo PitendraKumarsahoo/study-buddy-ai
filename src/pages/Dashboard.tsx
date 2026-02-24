@@ -5,9 +5,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import {
   BookOpen, MessageSquare, FileText, Newspaper, Compass, Mic,
-  ArrowRight, Activity, Clock, Sparkles, GraduationCap, History,
+  ArrowRight, Activity, Clock, Sparkles, GraduationCap, History, Trash2,
 } from "lucide-react";
+import { toast } from "sonner";
 
 const tools = [
   { to: "/study", label: "Study Assistant", icon: BookOpen, desc: "Notes, quizzes, flashcards" },
@@ -121,9 +126,16 @@ export default function Dashboard() {
 
       {/* Conversation History */}
       <section>
-        <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-          <History className="h-5 w-5 text-primary" /> Recent Conversations
-        </h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold flex items-center gap-2">
+            <History className="h-5 w-5 text-primary" /> Recent Conversations
+          </h2>
+          <Link to="/history">
+            <Button variant="ghost" size="sm" className="gap-1 text-muted-foreground">
+              View all <ArrowRight className="h-3 w-3" />
+            </Button>
+          </Link>
+        </div>
         {loading ? (
           <p className="text-sm text-muted-foreground">Loading...</p>
         ) : conversations.length === 0 ? (
@@ -139,9 +151,9 @@ export default function Dashboard() {
               const route = modeRoutes[conv.mode] || "/chat";
               const label = modeLabels[conv.mode] || conv.mode;
               return (
-                <Link key={conv.id} to={`${route}?conv=${conv.id}`}>
-                  <Card className="hover:border-primary/40 hover:shadow-card transition-all duration-200 group cursor-pointer">
-                    <CardContent className="p-4 flex items-center gap-4">
+                <Card key={conv.id} className="hover:border-primary/40 hover:shadow-card transition-all duration-200 group">
+                  <CardContent className="p-4 flex items-center gap-4">
+                    <Link to={`${route}?conv=${conv.id}`} className="flex items-center gap-4 flex-1 min-w-0">
                       <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
                         <Icon className="h-5 w-5 text-primary" />
                       </div>
@@ -155,9 +167,38 @@ export default function Dashboard() {
                         </p>
                       </div>
                       <ArrowRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-                    </CardContent>
-                  </Card>
-                </Link>
+                    </Link>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="ghost" size="icon" className="flex-shrink-0 text-muted-foreground hover:text-destructive">
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Delete conversation?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            This will permanently delete "{conv.title}".
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={async () => {
+                              const { error } = await supabase.from("conversations").delete().eq("id", conv.id);
+                              if (error) { toast.error("Failed to delete"); return; }
+                              setConversations((prev) => prev.filter((c) => c.id !== conv.id));
+                              toast.success("Conversation deleted");
+                            }}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                          >
+                            Delete
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </CardContent>
+                </Card>
               );
             })}
           </div>
