@@ -14,6 +14,7 @@ import ResumeGenerator from "./pages/ResumeGenerator";
 import VoiceNotes from "./pages/VoiceNotes";
 import NewsChecker from "./pages/NewsChecker";
 import Recommendations from "./pages/Recommendations";
+import ConversationHistory from "./pages/ConversationHistory";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -36,6 +37,7 @@ const App = () => (
             <Route path="/voice-notes" element={<VoiceNotes />} />
             <Route path="/news-check" element={<NewsChecker />} />
             <Route path="/recommendations" element={<Recommendations />} />
+            <Route path="/history" element={<ConversationHistory />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
